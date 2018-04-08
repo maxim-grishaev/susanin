@@ -1,0 +1,68 @@
+
+.Cell {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    background-color: #326b00;
+}
+.Cell-layer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    display: flex;
+}
+.Cell-layer.boulder,
+.Cell-layer.grass {
+    background-image: url('./img/grass.jpg');
+    background-repeat: repeat;
+    background-position: 0 0;
+    background-attachment: fixed;
+}
+.Cell-layer.boulder .Cell-layer-in{
+    width: 100%;
+    height: 100%;
+    background: url("./img/boulder.png") 50% 100% no-repeat;
+    background-size: contain;
+}
+.Cell-layer.gravel {
+    background: #d9b679 url("./img/gravel.png");
+}
+.Cell-layer.wormhole-in,
+.Cell-layer.wormhole-out {
+    top: 50%;
+    background-image: url("./img/teleport.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    z-index: 5;
+}
+.Cell-layer.wormhole-in {
+    background-position: 0 100%;
+}
+.Cell-layer.wormhole-out {
+    background-position: 0 0;
+}
+.Cell-layer.route {
+    top: 10px;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    z-index: 8;
+    text-shadow: 2px 2px #333;
+    text-align: center;
+}
+.Cell-layer.coords {
+    align-items: flex-start;
+    justify-content: flex-start;
+    font-size: xx-small;
+    line-height: 1;
+    text-shadow: 1px 1px #222;
+    z-index: 9;
+    padding: 3px;
+    opacity: .7;
+}

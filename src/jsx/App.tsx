@@ -1,86 +1,81 @@
 import * as React from 'react';
-import { values, groupBy } from 'ramda';
 
+import { Cell } from './Cell';
 import '../assets/App.css';
 
-import { createGraphFromStringMap, getStringMapFromGraph, TGraph, TVertexId, TVertexType } from '../lib/structs';
-import { howToGet } from '../lib/traverse';
+import { createGraphFromStringMap, TGraph, TVertexId, getIdByCoords } from '../lib/structs';
+import { showMeRoute } from '../lib/traverse';
 
 const logo = require('../assets/logo.svg');
 
-// const SIZE = {
-//     x: 5,
-//     y: 5,
-// };
-
 class App extends React.Component {
     map = `
-        ......:.
-        #####.:
-        ....#:.
-        .:#.....
-        .:######
-        ........
+        ......G.
+        #####.GG
+        ....#G.G
+        .G#.....
+        .G######
+        .G#.....
+        ....####
+        ....#...
     `;
-    graph = createGraphFromStringMap(this.map);
+    graph = createGraphFromStringMap(this.map, [
+        [[5, 7], [6, 5]],
+        [[0, 2], [0, 0]],
+        [[3, 3], [5, 2]],
+    ]);
 
     render () {
-        console.log('[23:13:38] App.tsx >>> render', this.graph);
-        const startId = this.graph.board[5][5];
-        const finishId = this.graph.board[0][7];
+        const startId = getIdByCoords(this.graph.board, 7, 7);
+        const finishId = getIdByCoords(this.graph.board, 7, 0);
         return (
             <div className="App">
                 <header className="App-header">
                     <img src={logo} className="App-logo" alt="logo"/>
                     <h1 className="App-title">Welcome to React</h1>
                 </header>
-                <p className="App-intro">
-                    To get started, edit <code>src/App.tsx</code> and save to reload.
-                </p>
-                <div style={{ textAlign: 'left' }}>
-                    {startId}, {finishId}
-                    <Map graph={this.graph} startId={startId} finishId={finishId} />
-                </div>
+                <Map graph={this.graph} startId={startId} finishId={finishId} />
             </div>
         );
     }
 }
 
+const getRouteMap = (route: string[]): object => route.reduce(
+    (memo, id, i) => {
+        memo[id] = String(i);
+        return memo;
+    },
+    {}
+);
+
 function Map ({ graph, startId, finishId }: { graph: TGraph, startId: string, finishId: string }) {
-    const path = howToGet(graph, startId, finishId);
-    const whOuts = groupBy(String, values(graph.wormholes));
-    const pathMap = groupBy(String, path);
+    const route = showMeRoute(graph, startId, finishId);
+    const routeMap = getRouteMap(route);
+    routeMap[startId] = 'Start';
+    routeMap[finishId] = 'Finish';
     return (
-        <>
+        <div className="Board">
             <table>
                 {graph.board.map((line, y) => {
                     return (
                         <tr key={y}>
-                            {line.map((vId: TVertexId, x) => {
-                                const v = graph.vertices[vId];
-                                return (
-                                    <td
-                                        key={vId}
-                                        style={{
-                                            border: '1px solid #eee',
-                                            background: vId in pathMap ? 'red' : 'white',
-                                        }}
+                            {line.map((vertexId: TVertexId, x) => (
+                                <td key={vertexId}>
+                                    <Cell
+                                        vertexId={vertexId}
+                                        graph={graph}
+                                        x={x}
+                                        y={y}
                                     >
-                                        {v.type === TVertexType.Normal && <>&nbsp;</>}
-                                        {v.type === TVertexType.Boulder && <>#</>}
-                                        {v.type === TVertexType.Gravy && <>G</>}
-                                        {vId in graph.wormholes && <>Wormhole In</>}
-                                        {vId in whOuts && <>Wormhole Out</>}
-                                        <br/><small style={{ color: '#999', fontSize: 'xx-small' }}>{x}, {y}</small>
-                                    </td>
-                                );
-                            })}
+                                        <strong>{routeMap[vertexId]}</strong>
+                                    </Cell>
+                                </td>
+                            ))}
                         </tr>
                     );
                 })}
             </table>
-            <pre>{getStringMapFromGraph(graph)}</pre>
-        </>
+        </div>
     );
 }
 

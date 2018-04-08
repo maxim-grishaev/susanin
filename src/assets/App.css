@@ -32,3 +32,24 @@ body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+
+.Board {
+    color: #fff;
+}
+
+.Board table {
+    margin: 0 auto;
+    border-collapse: collapse;
+    /*border: solid #FFF;*/
+    /*border-width: 0 1px 1px 0;*/
+}
+
+.Board tr {}
+
+.Board td {
+    /*border: solid #FFF;*/
+    /*border-width: 1px 0 0 1px;*/
+    padding: 0;
+    margin: 0;
+}

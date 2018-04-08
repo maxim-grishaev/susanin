@@ -4,7 +4,8 @@ import { v4 as uuid } from 'uuid';
 export enum TVertexType {
     Normal,
     Boulder,
-    Gravy,
+    Empty,
+    Gravel,
     Wormhole,
 }
 export type TGraphLinksTreeNode = { [id: string]: number };
@@ -28,19 +29,21 @@ export const createVertex = (type: TVertexType, id: string = uuid()): TVertex =>
 const createArray = (size: number): string[] => [...new Array(size).join(' ').split(' ')];
 const TYPE_MAP = {
     '.': TVertexType.Normal,
-    's': TVertexType.Normal,
-    'f': TVertexType.Normal,
-    ':': TVertexType.Gravy,
-    '#': TVertexType.Boulder
+    'G': TVertexType.Gravel,
+    '#': TVertexType.Boulder,
+    ' ': TVertexType.Empty,
 };
 type TRevDict = { [id: string]: string };
 const TYPE_MAP_REV: TRevDict = {
     [TVertexType.Normal]: '.',
-    [TVertexType.Gravy]: ':',
+    [TVertexType.Gravel]: 'G',
     [TVertexType.Boulder]: '#',
+    [TVertexType.Empty]: ' ',
 };
 
-export const createGraphFromStringMap = (map: string): TGraph => {
+export const getIdByCoords = (board: TBoard, x: number, y: number) => board[y][x];
+
+export const createGraphFromStringMap = (map: string, whList: number[][][]): TGraph => {
     const vertices: TVertexDict = {};
     const board: TBoard = map.trim().split('\n')
         .map(
@@ -48,13 +51,23 @@ export const createGraphFromStringMap = (map: string): TGraph => {
                 .trim()
                 .split('')
                 .map((type: string, x: number) => {
-                    const vertex = createVertex(TYPE_MAP[type], JSON.stringify({ x, y, type }));
+                    const vType = type in TYPE_MAP ? TYPE_MAP[type] : TVertexType.Boulder;
+                    const vertex = createVertex(vType, JSON.stringify({ x, y, _: type }));
                     vertices[vertex.id] = vertex;
                     return vertex.id;
                 })
         );
+    const wormholes = whList.reduce(
+        (memo, [whFrom, whTo]) => {
+            const idFrom = getIdByCoords(board, whFrom[0], whFrom[1]);
+            const idTo = getIdByCoords(board, whTo[0], whTo[1]);
+            memo[idFrom] = idTo;
+            return memo;
+        },
+        {}
+    );
     return {
-        wormholes: {},
+        wormholes,
         board,
         vertices,
     };
@@ -65,7 +78,7 @@ export const getStringMapFromGraph = (graph: TGraph): string => {
         .map(xLine => xLine
             .map(vertexId => {
                 const vertex = graph.vertices[vertexId];
-                return TYPE_MAP_REV[vertex.type] || TYPE_MAP_REV[TVertexType.Normal];
+                return TYPE_MAP_REV[vertex.type];
             })
             .join('')
         );
@@ -91,13 +104,13 @@ export const createEmptyGraph = (xSize: number, ySize: number): TGraph => {
         board,
     };
 };
-
 const vtxPath = (vertexId: TVertexId) => ['vertexes', vertexId, 'type'];
+
 export const updateGraphVertex = (type: TVertexType, x: number, y: number, graph: TGraph) => {
     let id: TVertexId = graph.board[x][y];
     return assocPath(vtxPath(id), type, graph);
 };
-
 const whPath = (vertexId: TVertexId) => ['wormholes', vertexId];
 export const addGraphWormhole = (from: TVertexId, to: TVertexId, graph: TGraph) => assocPath(whPath(from), to, graph);
+
 export const removeGraphWormhole = (from: TVertexId, graph: TGraph) => dissocPath(whPath(from), graph);

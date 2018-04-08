@@ -1,8 +1,8 @@
-import { TGraph, TGraphLinksTree, TVertexId, TVertexType } from './structs';
+import { TGraph, TGraphLinksTree, TVertex, TVertexId, TVertexType } from './structs';
 
 type TCosts = object;
 
-const lowestCostNode = (costs: TCosts, processed: TVertexId[]): TVertexId => Object.keys(costs)
+const getLowestCostNode = (costs: TCosts, processed: TVertexId[]): TVertexId => Object.keys(costs)
     .reduce(
         (cheapVertexId: TVertexId, vertexId: TVertexId) => {
             const isCheaper = cheapVertexId === '' || costs[vertexId] < costs[cheapVertexId];
@@ -15,59 +15,72 @@ const lowestCostNode = (costs: TCosts, processed: TVertexId[]): TVertexId => Obj
         ''
     );
 
-// function that returns the minimum cost and path to reach Finish
-const dijkstra = (graph: TGraphLinksTree, startNodeName: string, endNodeName: string) => {
-    // track the lowest cost to reach each node
-    let costs = {};
-    costs[endNodeName] = Infinity;
-    costs = Object.assign(costs, graph[startNodeName]);
+type TParents = { [id: string]: string };
+const getOptimalPath = (parents: TParents, finishId: string) => {
+    const optimalPath = [];
+    let parent = finishId;
+    do {
+        optimalPath.push(parent);
+        parent = parents[parent];
+    } while (parent);
+    optimalPath.reverse();
+    return optimalPath;
+};
 
-    // track paths
-    const parents = {[endNodeName]: ''};
-    Object.keys(graph[startNodeName]).forEach(child => {
-        parents[child] = startNodeName;
-    });
+// function that returns the minimum cost and path to reach Finish
+const susanin = (graph: TGraphLinksTree, startId: string, finishId: string) => {
+    // track the lowest cost to reach each vertexId
+    const costs = {
+        [finishId]: Infinity,
+        ...graph[startId],
+    };
 
     // track nodes that have already been processed
     const processed: string[] = [];
 
-    let node = lowestCostNode(costs, processed);
-
-    while (node) {
-        let cost = costs[node];
-        let children = graph[node];
-        for (let n in children) {
-            if (String(n) === String(startNodeName)) {
-                console.log('WE DON\'T GO BACK TO START');
-            } else {
-                console.log(`StartNodeName: ${startNodeName}`);
-                console.log(`Evaluating cost to node ${n} (looking from node ${node})`);
-                console.log(`Last Cost: ${costs[n]}`);
-                let newCost = cost + children[n];
-                console.log(`New Cost: ${newCost}`);
-                if (!costs[n] || costs[n] > newCost) {
-                    costs[n] = newCost;
-                    parents[n] = node;
-                    console.log('Updated cost und parents');
-                } else {
-                    console.log('A shorter path already exists');
-                }
-            }
+    // track paths
+    const parents = Object.keys(graph[startId]).reduce(
+        (memo, child) => {
+            memo[child] = startId;
+            return memo;
+        },
+        {
+            [finishId]: ''
         }
-        processed.push(node);
-        node = lowestCostNode(costs, processed);
+    );
+
+    let vertexId = getLowestCostNode(costs, processed);
+
+    while (vertexId) {
+        let cost = costs[vertexId];
+        let children = graph[vertexId];
+        Object.keys(children).forEach((n: string) => {
+            if (String(n) === String(startId)) {
+                console.log('WE DON\'T GO BACK TO START', startId);
+                return;
+            }
+            console.log(`StartNodeName: ${startId}`);
+            console.log(`Evaluating cost to node ${n} (looking from node ${vertexId})`);
+            console.log('Last Cost:', costs[n]);
+
+            const newCost = cost + children[n];
+            console.log('New Cost:', newCost);
+            if (costs[n] != null && costs[n] <= newCost) {
+                console.log('A shorter path already exists');
+                return;
+            }
+
+            costs[n] = newCost;
+            parents[n] = vertexId;
+            console.log('Updated cost and parents');
+        });
+        processed.push(vertexId);
+        vertexId = getLowestCostNode(costs, processed);
     }
 
-    let optimalPath = [endNodeName];
-    let parent = parents[endNodeName];
-    while (parent) {
-        optimalPath.push(parent);
-        parent = parents[parent];
-    }
-    optimalPath.reverse();
-
+    const optimalPath = getOptimalPath(parents, finishId);
     return {
-        cost: costs[endNodeName],
+        cost: costs[finishId],
         path: optimalPath
     };
 
@@ -75,8 +88,11 @@ const dijkstra = (graph: TGraphLinksTree, startNodeName: string, endNodeName: st
 
 const WEIGHT_MAP = {
     [TVertexType.Normal]: 1,
-    [TVertexType.Gravy]: 2,
+    [TVertexType.Gravel]: 2,
 };
+
+export const isJailed = (v: TVertex) => v.type === TVertexType.Boulder
+    || v.type === TVertexType.Empty;
 
 export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGraphLinksTree => {
     const linksMap: TGraphLinksTree = {};
@@ -84,7 +100,7 @@ export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGra
     const addEdgeToMap = (vFromId: TVertexId, vToId: TVertexId, weight: number | null = null) => {
         const vFrom = graph.vertices[vFromId];
         const vTo = graph.vertices[vToId];
-        if (vFrom.type === TVertexType.Boulder || vTo.type === TVertexType.Boulder) {
+        if (isJailed(vFrom) || isJailed(vTo)) {
             return;
         }
         if (!linksMap[vFrom.id]) {
@@ -105,25 +121,19 @@ export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGra
 
     graph.board.forEach((line: TVertexId[], y: number) => {
         line.forEach((vertexId: TVertexId, x: number) => {
-            const { type } = graph.vertices[vertexId];
-            switch (type) {
-                case TVertexType.Boulder:
-                    return;
-                // case TVertexType.Gravy:
-                // case TVertexType.Gravy:
-                default:
-                    // axis
-                    addByCoords(vertexId, x - 1, y);
-                    addByCoords(vertexId, x + 1, y);
-                    addByCoords(vertexId, x, y - 1);
-                    addByCoords(vertexId, x, y + 1);
-                    if (allowDiaginal) {
-                        addByCoords(vertexId, x - 1, y - 1);
-                        addByCoords(vertexId, x + 1, y + 1);
-                        addByCoords(vertexId, x - 1, y + 1);
-                        addByCoords(vertexId, x + 1, y - 1);
-                    }
-                    break;
+            const v = graph.vertices[vertexId];
+            if (isJailed(v)) {
+                return;
+            }
+            addByCoords(vertexId, x - 1, y);
+            addByCoords(vertexId, x + 1, y);
+            addByCoords(vertexId, x, y - 1);
+            addByCoords(vertexId, x, y + 1);
+            if (allowDiaginal) {
+                addByCoords(vertexId, x - 1, y - 1);
+                addByCoords(vertexId, x + 1, y + 1);
+                addByCoords(vertexId, x - 1, y + 1);
+                addByCoords(vertexId, x + 1, y - 1);
             }
         });
     });
@@ -133,7 +143,7 @@ export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGra
     return linksMap;
 };
 
-export const howToGet = (graph: TGraph, startId: string, fnishId: string, allowDiagonal: boolean = true) => {
+export const showMeRoute = (graph: TGraph, startId: string, fnishId: string, allowDiagonal: boolean = true) => {
     const linksMap = getEdgesTree(graph, allowDiagonal);
-    return dijkstra(linksMap, startId, fnishId).path;
+    return susanin(linksMap, startId, fnishId).path;
 };
