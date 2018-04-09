@@ -4,9 +4,7 @@ import { v4 as uuid } from 'uuid';
 export enum TVertexType {
     Normal,
     Boulder,
-    Empty,
     Gravel,
-    Wormhole,
 }
 export type TGraphLinksTreeNode = { [id: string]: number };
 export type TGraphLinksTree = { [id: string]: TGraphLinksTreeNode };
@@ -31,14 +29,12 @@ const TYPE_MAP = {
     '.': TVertexType.Normal,
     'G': TVertexType.Gravel,
     '#': TVertexType.Boulder,
-    ' ': TVertexType.Empty,
 };
 type TRevDict = { [id: string]: string };
 const TYPE_MAP_REV: TRevDict = {
     [TVertexType.Normal]: '.',
     [TVertexType.Gravel]: 'G',
     [TVertexType.Boulder]: '#',
-    [TVertexType.Empty]: ' ',
 };
 
 export const getIdByCoords = (board: TBoard, x: number, y: number) => board[y][x];
@@ -104,13 +100,39 @@ export const createEmptyGraph = (xSize: number, ySize: number): TGraph => {
         board,
     };
 };
-const vtxPath = (vertexId: TVertexId) => ['vertexes', vertexId, 'type'];
 
-export const updateGraphVertex = (type: TVertexType, x: number, y: number, graph: TGraph) => {
-    let id: TVertexId = graph.board[x][y];
-    return assocPath(vtxPath(id), type, graph);
+export const updateBoardSize = (xSize: number, ySize: number, graph: TGraph): TGraph => {
+    // update board
+    // remove inexistent wormholes
+    // remove
+    return graph;
 };
-const whPath = (vertexId: TVertexId) => ['wormholes', vertexId];
-export const addGraphWormhole = (from: TVertexId, to: TVertexId, graph: TGraph) => assocPath(whPath(from), to, graph);
 
-export const removeGraphWormhole = (from: TVertexId, graph: TGraph) => dissocPath(whPath(from), graph);
+const vtxPath = (vertexId: TVertexId): string[] => ['vertices', vertexId, 'type'];
+const whPath = (vertexId: TVertexId) => ['wormholes', vertexId];
+
+export const updateGraphVertexById = (type: TVertexType, id: TVertexId, graph: TGraph): TGraph =>
+    assocPath(vtxPath(id), type, graph);
+
+export const updateGraphVertexByCoords = (type: TVertexType, x: number, y: number, graph: TGraph): TGraph =>
+    updateGraphVertexById(type, getIdByCoords(graph.board, x, y), graph);
+
+export const addGraphWormhole = (from: TVertexId, to: TVertexId, graph: TGraph): TGraph =>
+    assocPath(whPath(from), to, graph);
+
+export const removeGraphWormhole = (vertexId: TVertexId, graph: TGraph): TGraph => {
+    if (!graph.wormholes[vertexId]) {
+        Object.keys(graph.wormholes).some(whInId => {
+            let whOutId = graph.wormholes[whInId];
+            const isFound = whOutId === vertexId;
+            if (isFound) {
+                vertexId = whInId;
+            }
+            return isFound;
+        });
+    }
+    if (!graph.wormholes[vertexId]) {
+        throw new Error(`Vertex is not in graph: ${vertexId}`);
+    }
+    return dissocPath(whPath(vertexId), graph);
+};

@@ -28,18 +28,18 @@ const getOptimalPath = (parents: TParents, finishId: string) => {
 };
 
 // function that returns the minimum cost and path to reach Finish
-const susanin = (graph: TGraphLinksTree, startId: string, finishId: string) => {
+const susanin = (graphLinksTree: TGraphLinksTree, startId: string, finishId: string) => {
     // track the lowest cost to reach each vertexId
     const costs = {
         [finishId]: Infinity,
-        ...graph[startId],
+        ...graphLinksTree[startId],
     };
 
     // track nodes that have already been processed
     const processed: string[] = [];
 
     // track paths
-    const parents = Object.keys(graph[startId]).reduce(
+    const parents = Object.keys(graphLinksTree[startId] || {}).reduce(
         (memo, child) => {
             memo[child] = startId;
             return memo;
@@ -52,38 +52,38 @@ const susanin = (graph: TGraphLinksTree, startId: string, finishId: string) => {
     let vertexId = getLowestCostNode(costs, processed);
 
     while (vertexId) {
-        let cost = costs[vertexId];
-        let children = graph[vertexId];
+        const currentCost = costs[vertexId];
+        const children = graphLinksTree[vertexId] || {};
         Object.keys(children).forEach((n: string) => {
             if (String(n) === String(startId)) {
-                console.log('WE DON\'T GO BACK TO START', startId);
+                // console.log('WE DON\'T GO BACK TO START', startId);
                 return;
             }
-            console.log(`StartNodeName: ${startId}`);
-            console.log(`Evaluating cost to node ${n} (looking from node ${vertexId})`);
-            console.log('Last Cost:', costs[n]);
+            // console.log(`StartNodeName: ${startId}`);
+            // console.log(`Evaluating cost to node ${n} (looking from node ${vertexId})`);
+            // console.log('Last Cost:', costs[n]);
 
-            const newCost = cost + children[n];
-            console.log('New Cost:', newCost);
+            const newCost = currentCost + children[n];
+            // console.log('New Cost:', newCost);
             if (costs[n] != null && costs[n] <= newCost) {
-                console.log('A shorter path already exists');
+                // console.log('A shorter path already exists');
                 return;
             }
 
             costs[n] = newCost;
             parents[n] = vertexId;
-            console.log('Updated cost and parents');
+            // console.log('Updated cost and parents');
         });
         processed.push(vertexId);
         vertexId = getLowestCostNode(costs, processed);
     }
 
     const optimalPath = getOptimalPath(parents, finishId);
+    const cost = costs[finishId];
     return {
-        cost: costs[finishId],
-        path: optimalPath
+        cost,
+        path: cost === Infinity ? [] : optimalPath,
     };
-
 };
 
 const WEIGHT_MAP = {
@@ -91,10 +91,20 @@ const WEIGHT_MAP = {
     [TVertexType.Gravel]: 2,
 };
 
-export const isJailed = (v: TVertex) => v.type === TVertexType.Boulder
-    || v.type === TVertexType.Empty;
+export const isJailed = (v: TVertex) => v.type === TVertexType.Boulder;
 
-export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGraphLinksTree => {
+type TOptions = {
+    allowDiagonal?: boolean,
+    allowPassByWormhole?: boolean,
+};
+
+export const getEdgesTree = (
+    graph: TGraph,
+    {
+        allowDiagonal = true,
+        allowPassByWormhole = false,
+    }: TOptions = {},
+): TGraphLinksTree => {
     const linksMap: TGraphLinksTree = {};
 
     const addEdgeToMap = (vFromId: TVertexId, vToId: TVertexId, weight: number | null = null) => {
@@ -125,11 +135,17 @@ export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGra
             if (isJailed(v)) {
                 return;
             }
+            if (vertexId in graph.wormholes) {
+                addEdgeToMap(vertexId, graph.wormholes[vertexId], 1);
+                if (!allowPassByWormhole) {
+                    return;
+                }
+            }
             addByCoords(vertexId, x - 1, y);
             addByCoords(vertexId, x + 1, y);
             addByCoords(vertexId, x, y - 1);
             addByCoords(vertexId, x, y + 1);
-            if (allowDiaginal) {
+            if (allowDiagonal) {
                 addByCoords(vertexId, x - 1, y - 1);
                 addByCoords(vertexId, x + 1, y + 1);
                 addByCoords(vertexId, x - 1, y + 1);
@@ -137,13 +153,11 @@ export const getEdgesTree = (graph: TGraph, allowDiaginal: boolean = true): TGra
             }
         });
     });
-    Object.keys(graph.wormholes).forEach((vertexId: string) => {
-        addEdgeToMap(vertexId, graph.wormholes[vertexId], 1);
-    });
     return linksMap;
 };
 
-export const showMeRoute = (graph: TGraph, startId: string, fnishId: string, allowDiagonal: boolean = true) => {
-    const linksMap = getEdgesTree(graph, allowDiagonal);
-    return susanin(linksMap, startId, fnishId).path;
+export const showMeRoute = (graph: TGraph, startId: TVertexId, finishId: TVertexId, options: TOptions = {}) => {
+    const linksMap = getEdgesTree(graph, options);
+    const pathResult = susanin(linksMap, startId, finishId);
+    return pathResult.path;
 };
