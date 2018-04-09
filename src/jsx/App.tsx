@@ -48,6 +48,8 @@ export default class Main extends React.PureComponent {
         editingId: null,
         wormholeId: null,
         showRoute: false,
+        allowDiagonal: true,
+        allowPassByWormhole: false,
     };
 
     handleWidth = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +80,9 @@ export default class Main extends React.PureComponent {
         this.setState({ wormholeId: null });
     }
 
-    updateCellType = (vertexId: string, type: TVertexType) => {
+    handleTypeUpdate = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const type = TVertexType[event.target.value];
+        const vertexId = String(this.state.editingId);
         this.graph = updateGraphVertexById(type, vertexId, this.graph);
         this.forceUpdate();
     }
@@ -115,35 +119,36 @@ export default class Main extends React.PureComponent {
             .some((k: string) => k === vertexId || graph.wormholes[k] === vertexId);
 
         const hasWormholeToFinish = wormholeId != null;
-
+        const isWormholeEditingCell = hasWormholeToFinish && wormholeId === vertexId;
+        const canSetWormholeEnter = !hasWormhole && !hasWormholeToFinish;
+        const canSetWormholeExit = !hasWormhole && hasWormholeToFinish && wormholeId !== vertexId;
+        const isStartOrFinish = vertexId !== startId && vertexId !== finishId;
         return (
             <>
                 <p>Editing: {vertexId}</p>
                 <ul className="CellActions">
-                    {vertexId !== startId && vertexId !== finishId && (
+                    {isStartOrFinish && (
                         <li onClick={() => this.setState({ startId: vertexId })}>Start here</li>
                     )}
-                    {vertexId !== startId && vertexId !== finishId && (
+                    {isStartOrFinish && (
                         <li onClick={() => this.setState({ finishId: vertexId })}>Finish here</li>
                     )}
                     {hasWormhole && (
                         <li onClick={() => this.removeWormhole(vertexId)}>Remove wormhole pair</li>
                     )}
-                    {wormholeId === vertexId && (
+                    {isWormholeEditingCell && (
                         <li onClick={() => this.setState({ wormholeId: null })}>Clear wormhole</li>
                     )}
-                    {!hasWormhole && !hasWormholeToFinish && (
+                    {canSetWormholeEnter && (
                         <li onClick={() => this.setState({ wormholeId: vertexId })}>Set wormhole</li>
                     )}
-                    {!hasWormhole && hasWormholeToFinish && wormholeId !== vertexId && (
+                    {canSetWormholeExit && (
                         <li onClick={() => this.setupWormhole(vertexId)}>Set wormhole exit</li>
                     )}
                     <li>
                         Cell type ={' '}
                         <select
-                            onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                                this.updateCellType(vertexId, TVertexType[event.target.value]);
-                            }}
+                            onChange={this.handleTypeUpdate}
                         >
                             {[
                                 TVertexType.Normal,
@@ -189,6 +194,17 @@ export default class Main extends React.PureComponent {
         this.setState({ showRoute: false });
     }
 
+    handleDiagonal = (event: React.ChangeEvent<HTMLInputElement>) => {
+        this.setState({
+            allowDiagonal: event.target.checked,
+        });
+    }
+    handlePassBy = (event: React.ChangeEvent<HTMLInputElement>) => {
+        this.setState({
+            allowPassByWormhole: event.target.checked,
+        });
+    }
+
     render () {
         return (
             <Layout>
@@ -206,6 +222,8 @@ export default class Main extends React.PureComponent {
                             graph={this.graph}
                             startId={this.state.startId}
                             finishId={this.state.finishId}
+                            allowPassByWormhole={this.state.allowPassByWormhole}
+                            allowDiagonal={this.state.allowDiagonal}
                         />
                     </InnerLayout>
                 )}
@@ -220,7 +238,7 @@ export default class Main extends React.PureComponent {
                                     </button>
                                 </p>
                                 <p>
-                                    Board width:&nbsp;
+                                    Board width:{' '}
                                     <input
                                         type="number"
                                         onChange={this.handleWidth}
@@ -228,12 +246,32 @@ export default class Main extends React.PureComponent {
                                     />
                                 </p>
                                 <p>
-                                    Board height:&nbsp;
+                                    Board height:{' '}
                                     <input
                                         type="number"
                                         onChange={this.handleHeight}
                                         value={String(this.state.height)}
                                     />
+                                </p>
+                                <p>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={this.state.allowDiagonal}
+                                            onChange={this.handleDiagonal}
+                                        />
+                                        Allow Diagonal moves
+                                    </label>
+                                </p>
+                                <p>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={this.state.allowPassByWormhole}
+                                            onChange={this.handlePassBy}
+                                        />
+                                        Allow pass by wormholes
+                                    </label>
                                 </p>
                                 {this.renderMenu()}
                             </>

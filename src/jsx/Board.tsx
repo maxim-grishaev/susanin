@@ -52,12 +52,19 @@ export function BoardWithRoute ({
     graph,
     startId,
     finishId,
+    allowDiagonal = true,
+    allowPassByWormhole = false,
 }: {
     graph: TGraph,
     startId: string,
     finishId: string,
+    allowDiagonal?: boolean,
+    allowPassByWormhole?: boolean,
 }) {
-    const route = showMeRoute(graph, startId, finishId);
+    const route = showMeRoute(graph, startId, finishId, {
+        allowDiagonal,
+        allowPassByWormhole,
+    });
     const routeMap = getRouteMap(route);
     routeMap[startId] = 'Start';
     routeMap[finishId] = 'Finish';
