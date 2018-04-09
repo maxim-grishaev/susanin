@@ -22,7 +22,7 @@ export type TGraph = {
 };
 export type TBoard = TVertexId[][];
 
-export const createVertex = (type: TVertexType, id: string = uuid()): TVertex => ({ id, type });
+export const createVertex = (type: TVertexType = TVertexType.Normal, id: string = uuid()): TVertex => ({ id, type });
 
 const createArray = (size: number): string[] => [...new Array(size).join(' ').split(' ')];
 const TYPE_MAP = {
@@ -37,7 +37,8 @@ const TYPE_MAP_REV: TRevDict = {
     [TVertexType.Boulder]: '#',
 };
 
-export const getIdByCoords = (board: TBoard, x: number, y: number) => board[y][x];
+export const getIdByCoords = (board: TBoard, x: number, y: number): TVertexId | undefined =>
+    board[y] ? board[y][x] : undefined;
 
 export const createGraphFromStringMap = (map: string, whList: number[][][]): TGraph => {
     const vertices: TVertexDict = {};
@@ -53,15 +54,19 @@ export const createGraphFromStringMap = (map: string, whList: number[][][]): TGr
                     return vertex.id;
                 })
         );
+
     const wormholes = whList.reduce(
         (memo, [whFrom, whTo]) => {
             const idFrom = getIdByCoords(board, whFrom[0], whFrom[1]);
             const idTo = getIdByCoords(board, whTo[0], whTo[1]);
-            memo[idFrom] = idTo;
+            if (idFrom && idTo) {
+                memo[idFrom] = idTo;
+            }
             return memo;
         },
         {}
     );
+
     return {
         wormholes,
         board,
@@ -82,30 +87,86 @@ export const getStringMapFromGraph = (graph: TGraph): string => {
 };
 
 export const createEmptyGraph = (xSize: number, ySize: number): TGraph => {
-    const vertexes = {};
+    const vertices = {};
     const board = createArray(ySize)
         .map((_1, y: number) => {
             let line = createArray(xSize);
             return line.map((_2, x: number) => {
                 const vertexId = JSON.stringify({ x, y });
                 const vertex = createVertex(TVertexType.Normal, vertexId);
-                vertexes[vertex.id] = vertex;
+                vertices[vertex.id] = vertex;
                 return vertex.id;
             });
         });
 
     return {
         wormholes: {},
-        vertices: vertexes,
+        vertices,
         board,
     };
 };
 
+const updateArrayLength = (size: number, array: Array<string | string[]>): Array<string | string[]> => {
+        if (size > array.length) {
+            return array.concat(createArray(size - array.length));
+        } else if (size < array.length) {
+            const newArray = [...array];
+            newArray.length = size;
+            return newArray;
+        }
+        return array;
+    };
+
+const traverseBoard = (callback: Function, board: TBoard): void => {
+    board.forEach((line: TVertexId[], y: number) => {
+        line.forEach((vertexId: TVertexId, x: number) => {
+            callback(vertexId, x, y);
+        });
+    });
+};
+
 export const updateBoardSize = (xSize: number, ySize: number, graph: TGraph): TGraph => {
+    const vertices = { ...graph.vertices };
+
     // update board
-    // remove inexistent wormholes
-    // remove
-    return graph;
+    const board = updateArrayLength(ySize, graph.board)
+        .map((line: string[], y: number) =>
+            updateArrayLength(xSize, line || createArray(xSize))
+                .map((oldVertexId: TVertexId, x: number) => {
+                    let id = JSON.stringify({ x, y });
+                    const vertex = oldVertexId
+                        ? vertices[oldVertexId]
+                        : createVertex(TVertexType.Normal, id);
+                    vertices[vertex.id] = vertex;
+                    return vertex.id;
+                })
+        );
+
+    // remove deleted vertices
+    traverseBoard(
+        (vertexId: TVertexId, x: number, y: number) => {
+            if (getIdByCoords(board, x, y) === undefined) {
+                delete vertices[vertexId];
+            }
+        },
+        graph.board
+    );
+
+    // remove invalid wormholes
+    const wormholes = { ...graph.wormholes };
+    Object.keys(graph.wormholes).forEach((whInId: TVertexId) => {
+        const whOutId = graph.wormholes[whInId];
+        if (!vertices[whInId] || !vertices[whOutId]) {
+            delete wormholes[whInId];
+        }
+    });
+
+    const newGraph: TGraph = {
+        board,
+        wormholes,
+        vertices,
+    };
+    return newGraph;
 };
 
 const vtxPath = (vertexId: TVertexId): string[] => ['vertices', vertexId, 'type'];
@@ -114,8 +175,10 @@ const whPath = (vertexId: TVertexId) => ['wormholes', vertexId];
 export const updateGraphVertexById = (type: TVertexType, id: TVertexId, graph: TGraph): TGraph =>
     assocPath(vtxPath(id), type, graph);
 
-export const updateGraphVertexByCoords = (type: TVertexType, x: number, y: number, graph: TGraph): TGraph =>
-    updateGraphVertexById(type, getIdByCoords(graph.board, x, y), graph);
+export const updateGraphVertexByCoords = (type: TVertexType, x: number, y: number, graph: TGraph): TGraph => {
+    const id = getIdByCoords(graph.board, x, y);
+    return id ? updateGraphVertexById(type, id, graph) : graph;
+};
 
 export const addGraphWormhole = (from: TVertexId, to: TVertexId, graph: TGraph): TGraph =>
     assocPath(whPath(from), to, graph);

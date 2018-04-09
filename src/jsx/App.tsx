@@ -175,18 +175,6 @@ export default class Main extends React.PureComponent {
     }
 
     showRoute = () => {
-        if (!this.state.startId) {
-            alert('Pick start cell');
-            return;
-        }
-        if (!this.state.finishId) {
-            alert('Pick finish cell');
-            return;
-        }
-        if (this.state.wormholeId) {
-            alert('Put exit for a wormhole');
-            return;
-        }
         this.setState({ showRoute: true });
     }
 

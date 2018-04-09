@@ -56,11 +56,29 @@ export function BoardWithRoute ({
     allowPassByWormhole = false,
 }: {
     graph: TGraph,
-    startId: string,
-    finishId: string,
+    startId?: TVertexId,
+    finishId?: TVertexId,
     allowDiagonal?: boolean,
     allowPassByWormhole?: boolean,
 }) {
+    startId = String(startId);
+    finishId = String(finishId);
+    if (!graph.vertices[startId] || !graph.vertices[finishId]) {
+        return (
+            <div className="BoardWithRoute-overlay-wrap">
+                <div className="BoardWithRoute-overlay">
+                    {!graph.vertices[startId] && (
+                        <p>Start missing</p>
+                    )}
+                    {!graph.vertices[finishId] && (
+                        <p>Finish missing</p>
+                    )}
+                </div>
+                <Board graph={graph}/>
+            </div>
+        );
+    }
+
     const route = showMeRoute(graph, startId, finishId, {
         allowDiagonal,
         allowPassByWormhole,
