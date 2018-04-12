@@ -1,13 +1,16 @@
-import { TGraph, TGraphLinksTree, TVertex, TVertexId, TVertexType } from './structs';
+import { getEdgesTree, TGraphEdgesTree, TOptions } from './edge';
+import { TGraph, TVertexId, TBoard } from './types';
 
-type TCosts = object;
+export const getIdByCoords = (board: TBoard, x: number, y: number): TVertexId | undefined =>
+  board[y] ? board[y][x] : undefined;
 
-const getLowestCostNode = (costs: TCosts, processed: TVertexId[]): TVertexId => Object.keys(costs)
+type TCosts = { [id: string]: number };
+type TProcessed = { [id: string]: true };
+const getLowestCostNode = (costs: TCosts, processed: TProcessed): TVertexId => Object.keys(costs)
     .reduce(
         (cheapVertexId: TVertexId, vertexId: TVertexId) => {
             const isCheaper = cheapVertexId === '' || costs[vertexId] < costs[cheapVertexId];
-            const isNew = processed.indexOf(vertexId) === -1;
-            if (isCheaper && isNew) {
+            if (isCheaper && !processed[vertexId]) {
                 cheapVertexId = vertexId;
             }
             return cheapVertexId;
@@ -28,18 +31,18 @@ const getOptimalPath = (parents: TParents, finishId: string) => {
 };
 
 // function that returns the minimum cost and path to reach Finish
-const susanin = (graphLinksTree: TGraphLinksTree, startId: string, finishId: string) => {
+const dijkstra = (graphEdgesTree: TGraphEdgesTree, startId: string, finishId: string) => {
     // track the lowest cost to reach each vertexId
     const costs = {
         [finishId]: Infinity,
-        ...graphLinksTree[startId],
+        ...graphEdgesTree[startId],
     };
 
     // track nodes that have already been processed
-    const processed: string[] = [];
+    const processed: TProcessed = {};
 
     // track paths
-    const parents = Object.keys(graphLinksTree[startId] || {}).reduce(
+    const parents = Object.keys(graphEdgesTree[startId] || {}).reduce(
         (memo, child) => {
             memo[child] = startId;
             return memo;
@@ -53,7 +56,7 @@ const susanin = (graphLinksTree: TGraphLinksTree, startId: string, finishId: str
 
     while (vertexId) {
         const currentCost = costs[vertexId];
-        const children = graphLinksTree[vertexId] || {};
+        const children = graphEdgesTree[vertexId] || {};
         Object.keys(children).forEach((n: string) => {
             if (String(n) === String(startId)) {
                 // console.log('WE DON\'T GO BACK TO START', startId);
@@ -74,7 +77,7 @@ const susanin = (graphLinksTree: TGraphLinksTree, startId: string, finishId: str
             parents[n] = vertexId;
             // console.log('Updated cost and parents');
         });
-        processed.push(vertexId);
+        processed[vertexId] = true;
         vertexId = getLowestCostNode(costs, processed);
     }
 
@@ -86,78 +89,17 @@ const susanin = (graphLinksTree: TGraphLinksTree, startId: string, finishId: str
     };
 };
 
-const WEIGHT_MAP = {
-    [TVertexType.Normal]: 1,
-    [TVertexType.Gravel]: 2,
-};
-
-export const isJailed = (v: TVertex) => v.type === TVertexType.Boulder;
-
-type TOptions = {
-    allowDiagonal?: boolean,
-    allowPassByWormhole?: boolean,
-};
-
-export const getEdgesTree = (
-    graph: TGraph,
-    {
-        allowDiagonal = true,
-        allowPassByWormhole = false,
-    }: TOptions = {},
-): TGraphLinksTree => {
-    const linksMap: TGraphLinksTree = {};
-
-    const addEdgeToMap = (vFromId: TVertexId, vToId: TVertexId, weight: number | null = null) => {
-        const vFrom = graph.vertices[vFromId];
-        const vTo = graph.vertices[vToId];
-        if (isJailed(vFrom) || isJailed(vTo)) {
-            return;
-        }
-        if (!linksMap[vFrom.id]) {
-            linksMap[vFrom.id] = {};
-        }
-
-        linksMap[vFrom.id][vTo.id] = weight === null ? WEIGHT_MAP[vFrom.type] + WEIGHT_MAP[vTo.type] : weight;
-    };
-
-    const addByCoords = (vFromId: TVertexId, x: number, y: number) => {
-        let line = graph.board[y];
-        const vToId: TVertexId | null = line && line[x];
-        if (!vToId) {
-            return;
-        }
-        addEdgeToMap(vFromId, vToId);
-    };
-
-    graph.board.forEach((line: TVertexId[], y: number) => {
-        line.forEach((vertexId: TVertexId, x: number) => {
-            const v = graph.vertices[vertexId];
-            if (isJailed(v)) {
-                return;
-            }
-            if (vertexId in graph.wormholes) {
-                addEdgeToMap(vertexId, graph.wormholes[vertexId], 1);
-                if (!allowPassByWormhole) {
-                    return;
-                }
-            }
-            addByCoords(vertexId, x - 1, y);
-            addByCoords(vertexId, x + 1, y);
-            addByCoords(vertexId, x, y - 1);
-            addByCoords(vertexId, x, y + 1);
-            if (allowDiagonal) {
-                addByCoords(vertexId, x - 1, y - 1);
-                addByCoords(vertexId, x + 1, y + 1);
-                addByCoords(vertexId, x - 1, y + 1);
-                addByCoords(vertexId, x + 1, y - 1);
-            }
-        });
-    });
-    return linksMap;
-};
-
-export const showMeRoute = (graph: TGraph, startId: TVertexId, finishId: TVertexId, options: TOptions = {}) => {
+export const susanin = (graph: TGraph, startId: TVertexId, finishId: TVertexId, options: TOptions = {}) => {
     const linksMap = getEdgesTree(graph, options);
-    const pathResult = susanin(linksMap, startId, finishId);
+    const pathResult = dijkstra(linksMap, startId, finishId);
     return pathResult.path;
+};
+
+// TODO: make it fnctional
+export const traverseBoard = (callback: ((vertexId: TVertexId, x: number, y: number) => void), board: TBoard): void => {
+  board.forEach((line: TVertexId[], y: number) => {
+    line.forEach((vertexId: TVertexId, x: number) => {
+      callback(vertexId, x, y);
+    });
+  });
 };

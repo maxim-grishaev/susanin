@@ -2,10 +2,8 @@ import * as React from 'react';
 import './Cell.css';
 import { groupBy, values } from 'ramda';
 
-import { TVertex, TVertexId, TVertexType, TGraph } from '../lib/structs';
-
-type TAny = JSX.Element | string | number | boolean | undefined;
-export type TChildren = TAny | TAny[];
+import { TVertex, TVertexId, TVertexType, TGraph } from '../lib/types';
+import { TChildren } from './types';
 
 function Vertex ({ vertex }: { vertex: TVertex }): JSX.Element {
     const { type } = vertex;
@@ -34,7 +32,7 @@ export function Cell ({
     onClick?: Function,
 }) {
     const whOuts = groupBy(String, values(graph.wormholes));
-    const vertex = graph.vertices[vertexId];
+    const vertex: TVertex = graph.vertices[vertexId];
     return (
         <div
             className="Cell"

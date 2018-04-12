@@ -1,14 +1,15 @@
 import * as React from 'react';
 import './App.css';
 
+import { TVertexType, TVertexId } from '../lib/types';
+import { getIdByCoords } from '../lib/traverse';
+import { createGraphFromStringMap, updateBoardSize } from '../lib/graph';
+import { updateGraphVertexById } from '../lib/vertex';
+import { addGraphWormhole, removeGraphWormhole } from '../lib/wormhole';
+
 import { Board, BoardWithRoute } from './Board';
 import { Layout, InnerLayout } from './Layout';
 import { Layer } from './Cell';
-
-import {
-    createGraphFromStringMap, getIdByCoords, updateGraphVertexById, addGraphWormhole, updateBoardSize,
-    removeGraphWormhole, TVertexType, TVertexId,
-} from '../lib/structs';
 
 const assertSize = (size: number) => {
     if (size !== size) {
@@ -155,7 +156,8 @@ export default class Main extends React.PureComponent {
                                 TVertexType.Boulder,
                                 TVertexType.Gravel,
                             ].map((type: TVertexType) => {
-                                const isSelected = type === graph.vertices[vertexId].type;
+                                const vertex = graph.vertices[vertexId];
+                                const isSelected = vertex && type === vertex.type;
                                 return (
                                     <option key={type} value={TVertexType[type]} selected={isSelected}>
                                         {TVertexType[type]}
@@ -231,6 +233,7 @@ export default class Main extends React.PureComponent {
                                         type="number"
                                         onChange={this.handleWidth}
                                         value={String(this.state.width)}
+                                        disabled={this.state.editingId !== null}
                                     />
                                 </p>
                                 <p>
@@ -239,6 +242,7 @@ export default class Main extends React.PureComponent {
                                         type="number"
                                         onChange={this.handleHeight}
                                         value={String(this.state.height)}
+                                        disabled={this.state.editingId !== null}
                                     />
                                 </p>
                                 <p>

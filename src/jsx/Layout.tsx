@@ -1,7 +1,7 @@
 import * as React from 'react';
 import './Layout.css';
 
-import { TChildren } from './Cell';
+import { TChildren } from './types';
 
 const logo = require('../assets/logo.svg');
 
@@ -20,7 +20,7 @@ export function Layout (
     );
 }
 
-export function InnerLayout ({ leftPanel, children }: { leftPanel: JSX.Element, children: JSX.Element }): JSX.Element {
+export function InnerLayout ({ leftPanel, children }: { leftPanel: JSX.Element, children: TChildren }): JSX.Element {
     return (
         <div className="InnerLayout">
             <div className="InnerLayout-left">

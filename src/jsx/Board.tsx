@@ -1,8 +1,8 @@
 import * as React from 'react';
 import './Board.css';
 
-import { TGraph, TVertexId } from '../lib/structs';
-import { showMeRoute } from '../lib/traverse';
+import { TGraph, TVertexId } from '../lib/types';
+import { susanin } from '../lib/traverse';
 
 import { Cell } from './Cell';
 
@@ -20,19 +20,21 @@ export const Board = ({
             <tbody>
                 {graph.board.map((line, y) => (
                     <tr key={y}>
-                        {line.map((vertexId: TVertexId, x) => (
-                            <td key={vertexId}>
-                                <Cell
-                                    onClick={onClickCell}
-                                    vertexId={vertexId}
-                                    graph={graph}
-                                    x={x}
-                                    y={y}
-                                >
-                                    {renderCell && renderCell(vertexId, x, y)}
-                                </Cell>
-                            </td>
-                        ))}
+                        {line.map((vertexId: TVertexId, x) => {
+                            return (
+                                <td key={vertexId}>
+                                    <Cell
+                                        onClick={onClickCell}
+                                        vertexId={vertexId}
+                                        graph={graph}
+                                        x={x}
+                                        y={y}
+                                    >
+                                        {renderCell && renderCell(vertexId, x, y)}
+                                    </Cell>
+                                </td>
+                            );
+                        })}
                     </tr>
                 ))}
             </tbody>
@@ -79,7 +81,7 @@ export function BoardWithRoute ({
         );
     }
 
-    const route = showMeRoute(graph, startId, finishId, {
+    const route = susanin(graph, startId, finishId, {
         allowDiagonal,
         allowPassByWormhole,
     });
