@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Graph traverse shold find easiest 1`] = `
+Array [
+  "{\\"x\\":0,\\"y\\":0,\\"_\\":\\".\\"}",
+  "{\\"x\\":1,\\"y\\":0,\\"_\\":\\".\\"}",
+]
+`;
+
+exports[`Graph traverse shold find wormhole 1`] = `
+Array [
+  "{\\"x\\":0,\\"y\\":0,\\"_\\":\\".\\"}",
+  "{\\"x\\":2,\\"y\\":0,\\"_\\":\\".\\"}",
+]
+`;

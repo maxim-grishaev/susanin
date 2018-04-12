@@ -30,12 +30,12 @@ const TYPE_MAP = {
     'G': TVertexType.Gravel,
     '#': TVertexType.Boulder,
 };
-type TRevDict = { [id: string]: string };
-const TYPE_MAP_REV: TRevDict = {
-    [TVertexType.Normal]: '.',
-    [TVertexType.Gravel]: 'G',
-    [TVertexType.Boulder]: '#',
-};
+// type TRevDict = { [id: string]: string };
+// const TYPE_MAP_REV: TRevDict = {
+//     [TVertexType.Normal]: '.',
+//     [TVertexType.Gravel]: 'G',
+//     [TVertexType.Boulder]: '#',
+// };
 
 export const getIdByCoords = (board: TBoard, x: number, y: number): TVertexId | undefined =>
     board[y] ? board[y][x] : undefined;
@@ -74,17 +74,17 @@ export const createGraphFromStringMap = (map: string, whList: number[][][]): TGr
     };
 };
 
-export const getStringMapFromGraph = (graph: TGraph): string => {
-    const lines: string[] = graph.board
-        .map(xLine => xLine
-            .map(vertexId => {
-                const vertex = graph.vertices[vertexId];
-                return TYPE_MAP_REV[vertex.type];
-            })
-            .join('')
-        );
-    return ['', ...lines, ''].join('\n');
-};
+// export const getStringMapFromGraph = (graph: TGraph): string => {
+//     const lines: string[] = graph.board
+//         .map(xLine => xLine
+//             .map(vertexId => {
+//                 const vertex = graph.vertices[vertexId];
+//                 return TYPE_MAP_REV[vertex.type];
+//             })
+//             .join('')
+//         );
+//     return ['', ...lines, ''].join('\n');
+// };
 
 const traverseBoard = (callback: Function, board: TBoard): void => {
     board.forEach((line: TVertexId[], y: number) => {
@@ -132,7 +132,7 @@ export const updateBoardSize = (xSize: number, ySize: number, graph: TGraph): TG
 
     // update board size
     const board: TBoard = updateArrayLength(ySize, graph.board)
-        .map((line: string[], y: number) =>
+        .map((line: string[]) =>
             updateArrayLength(xSize, line || createArray(xSize))
         );
 
